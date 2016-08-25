@@ -1,0 +1,40 @@
+postgres:
+  env_file: db.env
+  image: "postgres:9.4"
+  volumes:
+    - /var/lib/buildbot_db:/var/lib/postgresql/data
+  expose:
+    - 5432
+
+buildbot:
+  image: "pandurao/buildbot-master:0.1.0"
+  env_file: db.env
+  environment:
+    PROJECT: "$PROJECT"
+    URL: "$URL"
+    DOCKER_REGISTRY_USERNAME: "$DOCKER_REGISTRY_USERNAME"
+    DOCKER_REGISTRY_PASSWORD: "$DOCKER_REGISTRY_PASSWORD"
+    WORKERNAME: "$WORKERNAME"
+    WORKERPASS: "$WORKERPASS"
+  ports:
+    - "8010:8010"
+  expose:
+    - 9989
+  links:
+    - postgres
+  volumes:
+    - /var/lib/buildbot:/var/lib/buildbot
+    - ./master/master.cfg:/var/lib/buildbot/master.cfg
+
+worker:
+  image: "pandurao/buildbot-worker:0.1.0"
+  environment:
+    BUILDMASTER: buildbot
+    BUILDMASTER_PORT: 9989
+    WORKERNAME: "$WORKERNAME"
+    WORKERPASS: "$WORKERPASS"
+    WORKER_ENVIRONMENT_BLACKLIST: DOCKER_BUILDBOT* BUILDBOT_ENV_* BUILDBOT_1*
+  links:
+    - buildbot
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
